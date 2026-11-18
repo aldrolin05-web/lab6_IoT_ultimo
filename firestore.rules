@@ -1,0 +1,24 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /usuarios/{uid}/sesiones/{idSesion} {
+      function propietario() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function registroValido() {
+        let datos = request.resource.data;
+        return datos.keys().hasAll(['curso', 'fecha', 'horas', 'tipoActividad'])
+          && datos.curso is string && datos.curso.size() > 0
+          && datos.fecha is string
+          && datos.fecha.matches('[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])')
+          && datos.horas is number && datos.horas > 0
+          && datos.tipoActividad in ['Teoría', 'Práctica', 'Laboratorio'];
+      }
+
+      allow read, delete: if propietario();
+      allow create, update: if propietario() && registroValido();
+    }
+  }
+}
